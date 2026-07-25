@@ -809,6 +809,8 @@ class TestSkillsHubSourcesEndpoint:
     def test_sources_lists_configured_hubs(self, monkeypatch):
         # The endpoint should enumerate the configured hub sources without
         # requiring any live network — monkeypatch the router.
+        seen_limits = []
+
         class _Src:
             is_available = False
 
@@ -819,6 +821,7 @@ class TestSkillsHubSourcesEndpoint:
                 return self._sid
 
             def search(self, q, limit=10):
+                seen_limits.append(limit)
                 return [_FakeMeta("hermes-index/featured-skill", "trusted")]
 
         def _fake_router():
@@ -840,7 +843,9 @@ class TestSkillsHubSourcesEndpoint:
         # Every source carries a human label.
         assert all(s.get("label") for s in body["sources"])
         assert body["index_available"] is True
-        # Featured pulled from the index (zero extra API calls).
+        # Featured pulled from the index (zero extra API calls), with the same
+        # 60-item browse page used by the public Skills Hub.
+        assert seen_limits == [60]
         assert len(body["featured"]) == 1
         assert body["featured"][0]["trust_level"] == "trusted"
         assert isinstance(body["installed"], dict)

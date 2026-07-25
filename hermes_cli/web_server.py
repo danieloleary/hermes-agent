@@ -14553,7 +14553,7 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
                 if index_available:
                     try:
                         featured = [
-                            _skill_meta_to_payload(m) for m in src.search("", limit=12)
+                            _skill_meta_to_payload(m) for m in src.search("", limit=60)
                         ]
                     except Exception:
                         featured = []

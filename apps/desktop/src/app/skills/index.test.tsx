@@ -58,14 +58,25 @@ function toolset(overrides: Record<string, unknown> = {}) {
   }
 }
 
-async function renderSkills() {
+function skill(index: number) {
+  return {
+    name: `skill-${index}`,
+    description: `Skill ${index} description`,
+    category: 'testing',
+    enabled: true,
+    usage: 0,
+    provenance: 'bundled'
+  }
+}
+
+async function renderSkills(initialEntry = '/skills?tab=toolsets') {
   const { SkillsView } = await import('./index')
   let result: ReturnType<typeof render>
   await act(async () => {
     result = render(
       // SkillsView reads skills/toolsets via useQuery, so it needs a provider.
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/skills?tab=toolsets']}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <SkillsView />
         </MemoryRouter>
       </QueryClientProvider>
@@ -88,6 +99,17 @@ afterEach(() => {
   vi.clearAllMocks()
   // Shared singleton client — drop cached skills/toolsets so each test refetches.
   queryClient.clear()
+})
+
+describe('SkillsView skill inventory', () => {
+  it('renders the complete skills response instead of capping the list', async () => {
+    getSkills.mockResolvedValue(Array.from({ length: 25 }, (_, index) => skill(index + 1)))
+
+    await renderSkills('/skills?tab=skills')
+
+    await screen.findByText('skill-25')
+    expect(screen.getAllByRole('switch')).toHaveLength(25)
+  })
 })
 
 describe('SkillsView toolset management', () => {
