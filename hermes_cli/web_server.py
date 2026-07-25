@@ -920,6 +920,14 @@ _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
         ),
         "options": ["stash", "discard"],
     },
+    "updates.remote": {
+        "type": "text",
+        "description": "Git remote used by hermes update when --remote is omitted.",
+    },
+    "updates.branch": {
+        "type": "text",
+        "description": "Git branch used by hermes update when --branch is omitted.",
+    },
     "updates.refresh_cua_driver": {
         "type": "bool",
         "description": (

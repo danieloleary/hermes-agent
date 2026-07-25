@@ -62,6 +62,15 @@ def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
         ),
     )
     update_parser.add_argument(
+        "--remote",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Fetch updates from this git remote instead of the configured "
+            "updates.remote value (default: origin)."
+        ),
+    )
+    update_parser.add_argument(
         "--force",
         action="store_true",
         default=False,

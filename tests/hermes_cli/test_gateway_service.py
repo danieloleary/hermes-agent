@@ -2635,8 +2635,9 @@ class TestProfileArg:
         assert "<string>/bin/zsh</string>" in plist
         assert f"exec {external_python} -m hermes_cli.main gateway run --replace" in plist
         assert f"<string>{machine_home}</string>" in plist
+        label = gateway_cli.get_launchd_label()
         assert (
-            f"{machine_home}/Library/Logs/HermesGateway/ai.hermes.gateway/gateway.log"
+            f"{machine_home}/Library/Logs/HermesGateway/{label}/gateway.log"
             in plist
         )
         assert f"{external_home}/logs/gateway.log" not in plist

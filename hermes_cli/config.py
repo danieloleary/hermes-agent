@@ -3325,6 +3325,10 @@ DEFAULT_CONFIG = {
 
     # ``hermes update`` behaviour.
     "updates": {
+        # Optional durable git target for forked or machine-patched installs.
+        # CLI --remote/--branch values take precedence for a single run.
+        "remote": "origin",
+        "branch": "main",
         # Pre-update safety backup — ONE consolidated mechanism, three modes:
         #
         #   quick (default) — snapshot critical small state files (pairing

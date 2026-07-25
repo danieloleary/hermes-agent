@@ -7,7 +7,12 @@ from unittest.mock import patch
 
 import pytest
 
-from hermes_cli.main import cmd_update, PROJECT_ROOT
+from hermes_cli.main import (
+    PROJECT_ROOT,
+    _resolve_update_branch,
+    _resolve_update_remote,
+    cmd_update,
+)
 
 
 def _make_run_side_effect(branch="main", verify_ok=True, commit_count="0"):
@@ -735,6 +740,31 @@ class TestCmdUpdateBranchFlag:
     The CLI default stays 'main'; --branch lets callers pick a different
     target without monkey-patching the implementation.
     """
+
+    def test_configured_target_is_used_when_cli_omits_it(self, monkeypatch):
+        monkeypatch.setattr(
+            "hermes_cli.config.load_config",
+            lambda: {
+                "updates": {
+                    "remote": "danieloleary",
+                    "branch": "codex/external-volume-launchd",
+                }
+            },
+        )
+
+        args = SimpleNamespace()
+        assert _resolve_update_remote(args) == "danieloleary"
+        assert _resolve_update_branch(args) == "codex/external-volume-launchd"
+
+    def test_cli_target_overrides_config(self, monkeypatch):
+        monkeypatch.setattr(
+            "hermes_cli.config.load_config",
+            lambda: {"updates": {"remote": "fork", "branch": "patched"}},
+        )
+
+        args = SimpleNamespace(remote="origin", branch="main")
+        assert _resolve_update_remote(args) == "origin"
+        assert _resolve_update_branch(args) == "main"
 
     def _branch_side_effect(self, current_branch, target_branch, *, checkout_fails=False, track_fails=False, commit_count="0"):
         """Mock side-effect that knows about checkout/track behavior.
