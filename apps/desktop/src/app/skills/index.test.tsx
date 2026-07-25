@@ -10,6 +10,7 @@ import { queryClient } from '@/lib/query-client'
 
 const getSkills = vi.fn()
 const getToolsets = vi.fn()
+const getSkillHubSources = vi.fn()
 const toggleSkill = vi.fn()
 const toggleToolset = vi.fn()
 const getToolsetConfig = vi.fn()
@@ -23,6 +24,7 @@ vi.mock('@/hermes', async importOriginal => ({
   ...(await importOriginal<typeof HermesApi>()),
   getSkills: () => getSkills(),
   getToolsets: () => getToolsets(),
+  getSkillHubSources: () => getSkillHubSources(),
   toggleSkill: (name: string, enabled: boolean) => toggleSkill(name, enabled),
   toggleToolset: (name: string, enabled: boolean) => toggleToolset(name, enabled),
   getToolsetConfig: (name: string) => getToolsetConfig(name),
@@ -69,6 +71,16 @@ function skill(index: number) {
   }
 }
 
+function hubSkill(index: number) {
+  return {
+    identifier: `official/testing/hub-skill-${index}`,
+    name: `hub-skill-${index}`,
+    description: `Hub skill ${index} description`,
+    source: 'official',
+    trust_level: 'trusted'
+  }
+}
+
 async function renderSkills(initialEntry = '/skills?tab=toolsets') {
   const { SkillsView } = await import('./index')
   let result: ReturnType<typeof render>
@@ -89,6 +101,12 @@ async function renderSkills(initialEntry = '/skills?tab=toolsets') {
 beforeEach(() => {
   getSkills.mockResolvedValue([])
   getToolsets.mockResolvedValue([toolset()])
+  getSkillHubSources.mockResolvedValue({
+    featured: [],
+    index_available: true,
+    installed: {},
+    sources: []
+  })
   toggleToolset.mockResolvedValue({ ok: true, name: 'web', enabled: false })
   getToolsetConfig.mockResolvedValue({ has_category: true, active_provider: null, providers: [] })
   getUsageAnalytics.mockResolvedValue({ tools: [] })
@@ -107,8 +125,38 @@ describe('SkillsView skill inventory', () => {
 
     await renderSkills('/skills?tab=skills')
 
-    await screen.findByText('skill-25')
+    const lastSkill = await screen.findByText('skill-25')
     expect(screen.getAllByRole('switch')).toHaveLength(25)
+    expect(lastSkill.closest('.overflow-y-auto')).not.toBeNull()
+  })
+
+  it('keeps disabled skills visible with their switch off', async () => {
+    getSkills.mockResolvedValue([skill(1), { ...skill(2), enabled: false }])
+
+    await renderSkills('/skills?tab=skills')
+
+    await screen.findByText('skill-2')
+    const switches = screen.getAllByRole('switch')
+    expect(switches).toHaveLength(2)
+    expect(switches[0].getAttribute('aria-checked')).toBe('true')
+    expect(switches[1].getAttribute('aria-checked')).toBe('false')
+  })
+})
+
+describe('SkillsView Hub inventory', () => {
+  it('renders all 60 featured skills returned by the Hub backend', async () => {
+    getSkillHubSources.mockResolvedValue({
+      featured: Array.from({ length: 60 }, (_, index) => hubSkill(index + 1)),
+      index_available: true,
+      installed: {},
+      sources: [{ id: 'hermes-index', label: 'Hermes Index', available: true }]
+    })
+
+    await renderSkills('/skills?tab=hub')
+
+    const lastFeatured = await screen.findByText('hub-skill-60')
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(60)
+    expect(lastFeatured.closest('.overflow-y-auto')).not.toBeNull()
   })
 })
 
