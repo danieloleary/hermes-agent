@@ -3948,7 +3948,23 @@ def generate_launchd_plist() -> str:
     # to launchd's WorkingDirectory as to systemd's).
     working_dir = _stable_service_working_dir()
     hermes_home = str(get_hermes_home().resolve())
-    log_dir = get_hermes_home() / "logs"
+    # launchd can reject a job with EX_CONFIG before the process starts when
+    # its executable, working directory, or stdio paths live on /Volumes.
+    # A user shell can access the same external disk, so use an internal zsh
+    # trampoline and internal bootstrap logs while keeping HERMES_HOME (data,
+    # sessions, regular Hermes logs) on the external volume.
+    external_volume_home = Path(hermes_home).is_relative_to("/Volumes")
+    if external_volume_home:
+        working_dir = str(_launchd_user_home())
+        log_dir = (
+            _launchd_user_home()
+            / "Library"
+            / "Logs"
+            / "HermesGateway"
+            / get_launchd_label()
+        )
+    else:
+        log_dir = get_hermes_home() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     label = get_launchd_label()
     profile_arg = _profile_arg(hermes_home)
@@ -3980,21 +3996,18 @@ def generate_launchd_plist() -> str:
     )
 
     # Build ProgramArguments array, including --profile when using a named profile
-    prog_args = [
-        f"<string>{python_path}</string>",
-        "<string>-m</string>",
-        "<string>hermes_cli.main</string>",
-    ]
+    command = [python_path, "-m", "hermes_cli.main"]
     if profile_arg:
-        for part in profile_arg.split():
-            prog_args.append(f"<string>{part}</string>")
-    prog_args.extend(
-        [
-            "<string>gateway</string>",
-            "<string>run</string>",
-            "<string>--replace</string>",
+        command.extend(profile_arg.split())
+    command.extend(["gateway", "run", "--replace"])
+    if external_volume_home:
+        prog_args = [
+            "<string>/bin/zsh</string>",
+            "<string>-c</string>",
+            f"<string>exec {shlex.join(command)}</string>",
         ]
-    )
+    else:
+        prog_args = [f"<string>{part}</string>" for part in command]
     prog_args_xml = "\n        ".join(prog_args)
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>

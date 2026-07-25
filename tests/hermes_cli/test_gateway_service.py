@@ -2619,6 +2619,28 @@ class TestProfileArg:
         assert "<string>Aqua</string>" in plist
         assert "<string>Background</string>" in plist
 
+    def test_launchd_plist_bootstraps_external_home_from_internal_paths(
+        self, tmp_path, monkeypatch
+    ):
+        machine_home = tmp_path / "machine-home"
+        machine_home.mkdir()
+        external_home = Path("/Volumes/TestSSD/Hermes")
+        external_python = external_home / "hermes-agent" / "venv" / "bin" / "python"
+        monkeypatch.setattr(gateway_cli, "_launchd_user_home", lambda: machine_home)
+        monkeypatch.setattr(gateway_cli, "get_hermes_home", lambda: external_home)
+        monkeypatch.setattr(gateway_cli, "get_python_path", lambda: str(external_python))
+
+        plist = gateway_cli.generate_launchd_plist()
+
+        assert "<string>/bin/zsh</string>" in plist
+        assert f"exec {external_python} -m hermes_cli.main gateway run --replace" in plist
+        assert f"<string>{machine_home}</string>" in plist
+        assert (
+            f"{machine_home}/Library/Logs/HermesGateway/ai.hermes.gateway/gateway.log"
+            in plist
+        )
+        assert f"{external_home}/logs/gateway.log" not in plist
+
     def test_launchd_plist_path_uses_real_user_home_not_profile_home(self, tmp_path, monkeypatch):
         profile_dir = tmp_path / ".hermes" / "profiles" / "orcha"
         profile_dir.mkdir(parents=True)
