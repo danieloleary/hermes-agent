@@ -2408,6 +2408,56 @@ class TestInstallPathSafety:
         assert not (skills_dir / "bad-skill" / "leak.txt").exists()
         assert secret.read_text() == "data exfiltration payload\n"
 
+    def test_install_from_quarantine_supports_symlinked_hermes_home(
+        self, tmp_path, monkeypatch
+    ):
+        """A legitimate HERMES_HOME symlink must not break lock bookkeeping."""
+        import tools.skills_hub as hub
+        from tools.skills_guard import ScanResult
+
+        physical_home = tmp_path / "physical-home"
+        physical_home.mkdir()
+        linked_home = tmp_path / ".hermes"
+        try:
+            linked_home.symlink_to(physical_home, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pytest.skip("symlink creation unsupported on this platform")
+
+        skills_dir = linked_home / "skills"
+        quarantine_root = skills_dir / ".hub" / "quarantine"
+        quarantine_root.mkdir(parents=True)
+        q_dir = quarantine_root / "pending"
+        q_dir.mkdir()
+        (q_dir / "SKILL.md").write_text("---\nname: good-skill\n---\n")
+
+        bundle = hub.SkillBundle(
+            name="good-skill",
+            files={"SKILL.md": "---\nname: good-skill\n---\n"},
+            source="official",
+            identifier="official/research/good-skill",
+            trust_level="builtin",
+        )
+        scan_result = ScanResult(
+            skill_name="good-skill",
+            source="official",
+            trust_level="builtin",
+            verdict="safe",
+        )
+        lock_path = skills_dir / ".hub" / "lock.json"
+
+        monkeypatch.setattr(hub, "SKILLS_DIR", skills_dir)
+        monkeypatch.setattr(hub, "QUARANTINE_DIR", quarantine_root)
+        monkeypatch.setattr(hub.HubLockFile.__init__, "__defaults__", (lock_path,))
+
+        install_dir = hub.install_from_quarantine(
+            q_dir, "good-skill", "research", bundle, scan_result,
+        )
+
+        assert install_dir == (physical_home / "skills" / "research" / "good-skill")
+        entry = HubLockFile(path=lock_path).get_installed("good-skill")
+        assert entry is not None
+        assert entry["install_path"] == "research/good-skill"
+
 
 # ---------------------------------------------------------------------------
 # parallel_search_sources — overall_timeout must be honoured even when a

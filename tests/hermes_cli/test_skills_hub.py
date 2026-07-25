@@ -404,6 +404,58 @@ def test_do_install_preserves_nested_official_optional_path(
     assert installs == [{"name": "trl-fine-tuning", "category": "mlops/training"}]
 
 
+def test_do_install_renders_success_with_symlinked_skills_dir(
+    monkeypatch, tmp_path, hub_env
+):
+    class _OfficialSource:
+        def inspect(self, identifier):
+            return type("Meta", (), {
+                "extra": {},
+                "identifier": "official/research/good-skill",
+            })()
+
+        def fetch(self, identifier):
+            return type("Bundle", (), {
+                "name": "good-skill",
+                "files": {"SKILL.md": "# good"},
+                "source": "official",
+                "identifier": "official/research/good-skill",
+                "trust_level": "builtin",
+                "metadata": {},
+            })()
+
+    _install_mocks(monkeypatch, tmp_path, _OfficialSource)
+
+    import tools.skills_hub as hub
+
+    physical_home = tmp_path / "physical-home"
+    physical_skills = physical_home / "skills"
+    install_dir = physical_skills / "research" / "good-skill"
+    install_dir.mkdir(parents=True)
+    linked_home = tmp_path / ".hermes"
+    try:
+        linked_home.symlink_to(physical_home, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unsupported on this platform")
+
+    monkeypatch.setattr(hub, "SKILLS_DIR", linked_home / "skills")
+    monkeypatch.setattr(
+        hub,
+        "install_from_quarantine",
+        lambda q, name, category, bundle, result: install_dir,
+    )
+
+    sink = StringIO()
+    console = Console(file=sink, force_terminal=False, color_system=None)
+    do_install(
+        "official/research/good-skill",
+        console=console,
+        skip_confirm=True,
+    )
+
+    assert "Installed: research/good-skill" in sink.getvalue()
+
+
 # ---------------------------------------------------------------------------
 # UrlSource-specific install paths: --name override, interactive prompts,
 # non-interactive error, existing-category scan.
