@@ -17,6 +17,16 @@ See also:
 - [Bundled Skills Catalog](/reference/skills-catalog)
 - [Official Optional Skills Catalog](/reference/optional-skills-catalog)
 
+## Desktop Skills, Capabilities, and Hub
+
+The Desktop **Skills** page separates three inventories that are easy to confuse:
+
+- **Skills / Capabilities** lists every locally discovered skill for the active profile, including disabled skills with their switches off. The left rail scrolls; the number of visible rows is not the inventory total.
+- **Hub** is the install catalog. Its landing page shows a featured page (currently up to 60 entries), not every catalog entry. Use search and source filters—or `hermes skills browse` in the CLI—to explore beyond the featured page.
+- **Toolsets** are executable capability groups such as browser, terminal, and web. They are not skills and have a separate enablement state.
+
+Installing a skill does not load it into an already-running agent session. Start a new session or use `/reset` after skill/tool changes. After changing Hermes source code, restart the Desktop backend or quit and reopen the app.
+
 ## Starting with a blank slate
 
 By default every profile is seeded with the bundled skill catalog, and each `hermes update` adds any newly bundled skills. If you want a profile with **no bundled skills** — and that stays empty across updates — you have two paths:
