@@ -398,6 +398,24 @@ TOOLSETS = {
         "includes": []
     },
 
+    "codex-supervised-none": {
+        "description": "Codex-supervised ACP reasoning with no agent-callable tools",
+        "tools": [],
+        "includes": [],
+    },
+
+    "codex-supervised-read": {
+        "description": "Codex-supervised ACP research with read-only tools",
+        "tools": [
+            "web_search", "web_extract",
+            "read_file", "search_files",
+            "skills_list", "skill_view",
+            "vision_analyze",
+            "session_search",
+        ],
+        "includes": [],
+    },
+
     "hermes-api-server": {
         "description": "OpenAI-compatible API server — full agent tools accessible via HTTP (no interactive UI tools like clarify or send_message)",
         "tools": [

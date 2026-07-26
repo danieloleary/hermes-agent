@@ -130,7 +130,16 @@ def _expand_acp_enabled_toolsets(
     toolsets: List[str] | None = None,
     mcp_server_names: List[str] | None = None,
 ) -> List[str]:
-    """Return ACP toolsets plus explicit MCP server toolsets for this session."""
+    """Return ACP toolsets plus explicit MCP server toolsets for this session.
+
+    An ACP client may impose a narrower process-level capability boundary with
+    ``HERMES_ACP_TOOLSETS``. This is intentionally process-scoped: the normal
+    desktop, CLI, gateway, and other ACP clients keep their existing defaults.
+    """
+    supervised = os.environ.get("HERMES_ACP_TOOLSETS", "").strip()
+    if supervised:
+        toolsets = [name.strip() for name in supervised.split(",") if name.strip()]
+
     expanded: List[str] = []
     for name in list(toolsets or ["hermes-acp"]):
         if name and name not in expanded:
